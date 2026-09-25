@@ -624,7 +624,6 @@
     transition: .2s;
   }
   .upgrade-option:hover .uo-arrow { color: #a78bfa; }
-  /* IN-APP BROWSER WARNING */
   .inapp-warning {
     display: none;
     position: fixed; inset: 0;
@@ -769,14 +768,12 @@
       <button class="btn-mini" id="btnLogout" type="button">Logout</button>
     </div>
 
-    <!-- Admin Tabs -->
     <div class="admin-tabs hidden" id="adminTabs">
       <button class="admin-tab active" data-tab="kelola">Kelola</button>
       <button class="admin-tab" data-tab="daftar">Daftar</button>
       <button class="admin-tab" data-tab="generator">Generate</button>
     </div>
 
-    <!-- Admin: Kelola User -->
     <div id="panelKelola" class="hidden">
       <div class="admin-form">
         <div class="title-form"><div class="dot"></div>Edit Limit & Durasi User</div>
@@ -804,7 +801,6 @@
       <pre class="result" id="adminResult"></pre>
     </div>
 
-    <!-- Admin: Daftar User -->
     <div id="panelDaftar" class="hidden">
       <div class="admin-head">
         <div class="title">Daftar User</div>
@@ -825,7 +821,6 @@
       </div>
     </div>
 
-    <!-- Generator Section -->
     <div id="generatorSection">
       <div class="stats-grid hidden" id="userStats">
         <div class="stat-card">
@@ -840,7 +835,6 @@
         </div>
       </div>
 
-      <!-- Menu Utama -->
       <div id="upgradeHub" class="hidden">
         <h1>Menu <em>Utama</em></h1>
         <p class="sub">Pilih apa yang mau lu lakuin.</p>
@@ -872,7 +866,6 @@
         </div>
       </div>
 
-      <!-- Step 1: Send Link -->
       <div id="step1" class="hidden">
         <h1>Alight Motion <em>Premium</em></h1>
         <p class="sub">Masukkan email, kami kirim magic link buat aktivasi premium.</p>
@@ -890,7 +883,6 @@
         </form>
       </div>
 
-      <!-- Step 2: Verify -->
       <div id="step2" class="hidden">
         <h1>Masukkan <em>Magic Key</em></h1>
         <p class="sub">Long-press link di email → "Copy link" → paste di bawah.</p>
@@ -917,7 +909,6 @@
         </form>
       </div>
 
-      <!-- Reward Ads -->
       <div id="adsSection" class="hidden">
         <div class="ads-header">
           <div class="icon-big"><span>🎬</span></div>
@@ -950,7 +941,6 @@
         <button type="button" class="btn-ghost" id="btnCancelAds">← Batal & Kembali ke Menu</button>
       </div>
 
-      <!-- Paket Section -->
       <div id="packageSection" class="hidden">
         <div class="ads-header">
           <div class="icon-big" style="background:linear-gradient(135deg,#8b5cf6,#ec4899);"><span>🎁</span></div>
@@ -1082,12 +1072,34 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
   // ============================================================
-  //  KONFIGURASI
+  //  🔥 FIREBASE IMPORT
   // ============================================================
-  const WA_CHANNEL_URL = "https://whatsapp.com/channel/XXXXX";
-  const WA_ADMIN_NUMBER = "6281234567890";
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-app.js';
+  import { getDatabase, ref, get, set, update, remove, onValue } from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-database.js';
+
+  // ============================================================
+  //  🔥 FIREBASE CONFIG — UDAH DIISI PUNYA LU
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyCc9cuuc1IIwa1qWFRdGHB5UR-vSjpS_60",
+    authDomain: "amprembyvolz.firebaseapp.com",
+    databaseURL: "https://amprembyvolz-default-rtdb.firebaseio.com",
+    projectId: "amprembyvolz",
+    storageBucket: "amprembyvolz.firebasestorage.app",
+    messagingSenderId: "530230884475",
+    appId: "1:530230884475:web:b99efa6c4d3ffb2ab88ade"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // ============================================================
+  //  KONFIGURASI APP
+  // ============================================================
+  const WA_CHANNEL_URL = "https://whatsapp.com/channel/0029VaeWGaZ05MUZJYQa9345";
+  const WA_ADMIN_NUMBER = "584167367544";
   const ADSTERRA_DIRECT_LINK = "https://www.profitableratecpmnetwork.com/p3ytxu9sx?key=a20065b00860174b06b0e9d2c2c5eedc";
 
   const AD_WAIT_SECONDS = 15;
@@ -1126,13 +1138,54 @@
   let lastSendTime = 0;
   let confirmCallback = null;
   let adsState = { step: 0, adOpened: false };
-  let pkgCallback = null;
+
+  // ============================================================
+  //  🔥 FIREBASE HELPERS
+  // ============================================================
+  async function fbGetUsers() {
+    try {
+      const snapshot = await get(ref(db, 'users'));
+      return snapshot.val() || {};
+    } catch (e) {
+      console.error('Firebase getUsers error:', e);
+      return {};
+    }
+  }
+
+  async function fbSaveUser(username, userData) {
+    try {
+      await set(ref(db, 'users/' + username), userData);
+      return true;
+    } catch (e) {
+      console.error('Firebase saveUser error:', e);
+      return false;
+    }
+  }
+
+  async function fbUpdateUser(username, patch) {
+    try {
+      await update(ref(db, 'users/' + username), patch);
+      return true;
+    } catch (e) {
+      console.error('Firebase updateUser error:', e);
+      return false;
+    }
+  }
+
+  async function fbDeleteUser(username) {
+    try {
+      await remove(ref(db, 'users/' + username));
+      return true;
+    } catch (e) {
+      console.error('Firebase deleteUser error:', e);
+      return false;
+    }
+  }
 
   // ============ IN-APP BROWSER DETECTION ============
   function isInAppBrowser() {
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     if (/FBAN|FBAV|Instagram|Line|WhatsApp|Twitter|Telegram|MicroMessenger|TikTok|SnapChat|LinkedIn|Pinterest|Slack|Discord|Viber|WeChat|FB_IAB|FB4A|FBIOS|Barcelona/i.test(ua)) return true;
-    if (/Android.*Version\/[\d.]+.*Chrome\/[\d.]+ Mobile Safari/i.test(ua) && !/wv\)/.test(ua) === false) return true;
     if (/(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(ua)) return true;
     if (/Android.*; wv\)/.test(ua)) return true;
     return false;
@@ -1146,16 +1199,12 @@
 
   function showInAppWarning() {
     const warn = $('inappWarning');
-    if (warn) {
-      warn.classList.add('show');
-      document.body.style.overflow = 'hidden';
-    }
+    if (warn) { warn.classList.add('show'); document.body.style.overflow = 'hidden'; }
   }
 
   function bindInAppButtons() {
     const btnChrome = $('btnOpenChrome');
     const btnCopy = $('btnCopyLink');
-
     if (btnChrome) {
       btnChrome.onclick = () => {
         const url = window.location.href;
@@ -1165,15 +1214,12 @@
         } else if (/iphone|ipad|ipod/i.test(ua)) {
           const cleanUrl = url.replace(/^https?:\/\//, '');
           window.location.href = `googlechrome://${cleanUrl}`;
-          setTimeout(() => {
-            toast('Kalau gak kebuka, klik "Copy Link" terus paste di Chrome', 'err');
-          }, 1500);
+          setTimeout(() => toast('Kalau gak kebuka, klik "Copy Link" terus paste di Chrome', 'err'), 1500);
         } else {
           window.open(url, '_blank');
         }
       };
     }
-
     if (btnCopy) {
       btnCopy.onclick = async () => {
         const ok = await copyToClipboard(window.location.href);
@@ -1181,43 +1227,6 @@
       };
     }
   }
-
-  // ============ STORAGE ============
-  function getUsers() {
-    try { return JSON.parse(localStorage.getItem('amp_users') || '{}'); }
-    catch { return {}; }
-  }
-  function saveUsers(u) { localStorage.setItem('amp_users', JSON.stringify(u)); }
-
-  function genUserId() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let s = 'USR-';
-    for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    return s;
-  }
-  function hashKey(str) {
-    let h = 0;
-    for (let i = 0; i < str.length; i++) { h = ((h << 5) - h) + str.charCodeAt(i); h |= 0; }
-    return 'h_' + Math.abs(h).toString(36);
-  }
-  function seedAdmin() {
-    const users = getUsers();
-    if (!users[ADMIN_USERNAME]) {
-      users[ADMIN_USERNAME] = {
-        id: 'ADM-VOLZ01', username: ADMIN_USERNAME,
-        keyHash: hashKey(ADMIN_PASSWORD), role: 'admin',
-        keyLimit: 0, keyUsed: 0, durationDays: 0,
-        createdAt: Date.now(), expiresAt: 0, generations: []
-      };
-      saveUsers(users);
-    }
-  }
-  function getSession() {
-    try { return JSON.parse(localStorage.getItem('amp_session') || 'null'); }
-    catch { return null; }
-  }
-  function setSession(u) { localStorage.setItem('amp_session', JSON.stringify({ username: u, ts: Date.now() })); }
-  function clearSession() { localStorage.removeItem('amp_session'); }
 
   // ============ HELPERS ============
   function toast(msg, type = 'ok') {
@@ -1288,6 +1297,24 @@
     return null;
   }
 
+  function genUserId() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = 'USR-';
+    for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+  }
+  function hashKey(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) { h = ((h << 5) - h) + str.charCodeAt(i); h |= 0; }
+    return 'h_' + Math.abs(h).toString(36);
+  }
+  function getSession() {
+    try { return JSON.parse(localStorage.getItem('amp_session') || 'null'); }
+    catch { return null; }
+  }
+  function setSession(u) { localStorage.setItem('amp_session', JSON.stringify({ username: u, ts: Date.now() })); }
+  function clearSession() { localStorage.removeItem('amp_session'); }
+
   // ============ SCREEN NAV ============
   function showScreen(id) {
     ['loginScreen','registerScreen','appScreen'].forEach(s => $(s).classList.add('hidden'));
@@ -1305,10 +1332,7 @@
     confirmCallback = callback;
     $('confirmModal').classList.add('show');
   }
-  function closeConfirm() {
-    $('confirmModal').classList.remove('show');
-    confirmCallback = null;
-  }
+  function closeConfirm() { $('confirmModal').classList.remove('show'); confirmCallback = null; }
   $('btnConfirmYes').addEventListener('click', () => {
     const cb = confirmCallback;
     closeConfirm();
@@ -1336,8 +1360,10 @@
   function closePkg() { $('pkgModal').classList.remove('show'); }
   window.closePkg = closePkg;
 
-  // ============ LOGIN ============
-  $('loginForm').addEventListener('submit', (e) => {
+  // ============================================================
+  //  LOGIN
+  // ============================================================
+  $('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = $('loginUser').value.trim().toLowerCase();
     const key = $('loginKey').value;
@@ -1348,14 +1374,24 @@
     if (!key) return toast('Masukkan password', 'err');
     setLoading(btn, true);
 
-    setTimeout(() => {
-      const users = getUsers();
+    try {
+      const users = await fbGetUsers();
+
       if (username === ADMIN_USERNAME) {
         if (key !== ADMIN_PASSWORD) {
           showResult(resEl, { error: 'Password admin salah' }, false);
           toast('Password admin salah', 'err');
           setLoading(btn, false, 'Masuk');
           return;
+        }
+        if (!users[ADMIN_USERNAME]) {
+          users[ADMIN_USERNAME] = {
+            id: 'ADM-VOLZ01', username: ADMIN_USERNAME,
+            keyHash: hashKey(ADMIN_PASSWORD), role: 'admin',
+            keyLimit: 0, keyUsed: 0, durationDays: 0,
+            createdAt: Date.now(), expiresAt: 0, generations: []
+          };
+          await fbSaveUser(ADMIN_USERNAME, users[ADMIN_USERNAME]);
         }
         currentUser = users[ADMIN_USERNAME];
         setSession(ADMIN_USERNAME);
@@ -1364,6 +1400,7 @@
         setLoading(btn, false, 'Masuk');
         return;
       }
+
       if (!users[username]) {
         showResult(resEl, { error: 'Username belum terdaftar' }, false);
         toast('Username belum terdaftar', 'err');
@@ -1380,12 +1417,19 @@
       setSession(username);
       toast('Login berhasil 👋');
       showApp();
+    } catch (err) {
+      console.error(err);
+      showResult(resEl, { error: 'Gagal konek ke server' }, false);
+      toast('Gagal konek ke server', 'err');
+    } finally {
       setLoading(btn, false, 'Masuk');
-    }, 300);
+    }
   });
 
-  // ============ REGISTER ============
-  $('registerForm').addEventListener('submit', (e) => {
+  // ============================================================
+  //  REGISTER
+  // ============================================================
+  $('registerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = $('regUser').value.trim().toLowerCase();
     const pass = $('regPass').value;
@@ -1393,16 +1437,18 @@
     const btn = $('btnRegister');
     const resEl = $('registerResult');
     clearResult(resEl);
+
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      showResult(resEl, { error: 'Username harus 3-20 karakter, hanya huruf/angka/underscore' }, false);
+      showResult(resEl, { error: 'Username harus 3-20 karakter' }, false);
       return toast('Username tidak valid', 'err');
     }
     if (pass.length < 6) { showResult(resEl, { error: 'Password minimal 6 karakter' }, false); return toast('Password kekurangan', 'err'); }
-    if (pass !== pass2) { showResult(resEl, { error: 'Verifikasi password tidak cocok' }, false); return toast('Password tidak cocok', 'err'); }
+    if (pass !== pass2) { showResult(resEl, { error: 'Password tidak cocok' }, false); return toast('Password tidak cocok', 'err'); }
     if (username === ADMIN_USERNAME) { showResult(resEl, { error: 'Username ini tidak bisa dipakai' }, false); return toast('Username tidak bisa dipakai', 'err'); }
+
     setLoading(btn, true);
-    setTimeout(() => {
-      const users = getUsers();
+    try {
+      const users = await fbGetUsers();
       if (users[username]) {
         showResult(resEl, { error: 'Username sudah dipakai' }, false);
         toast('Username sudah ada', 'err');
@@ -1415,14 +1461,16 @@
         createdAt: Date.now(), expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000),
         generations: [], adProgress: 0
       };
-      users[username] = newUser;
-      saveUsers(users);
+      const ok = await fbSaveUser(username, newUser);
+      if (!ok) throw new Error('Gagal simpan');
+
       showResult(resEl, {
         success: true, message: 'Akun berhasil dibuat!',
         user_id: newUser.id, username: newUser.username,
         limit: newUser.keyLimit, masa_aktif: '7 hari'
       }, true);
       toast('Akun dibuat! ID: ' + newUser.id);
+
       setTimeout(() => {
         currentUser = newUser;
         setSession(username);
@@ -1430,12 +1478,19 @@
         clearResult(resEl);
         showApp();
       }, 1100);
+    } catch (err) {
+      console.error(err);
+      showResult(resEl, { error: 'Gagal daftar: ' + err.message }, false);
+      toast('Gagal daftar', 'err');
+    } finally {
       setLoading(btn, false, 'Daftar');
-    }, 400);
+    }
   });
 
-  // ============ SHOW APP ============
-  function showApp() {
+  // ============================================================
+  //  SHOW APP
+  // ============================================================
+  async function showApp() {
     showScreen('appScreen');
     $('uName').textContent = '@' + currentUser.username;
     $('uId').textContent = currentUser.id;
@@ -1462,7 +1517,6 @@
       renderUserStats();
       renderHistory();
       showUpgradeHub();
-      // WA popup SETIAP LOGIN
       setTimeout(() => $('waModal').classList.add('show'), 900);
     }
   }
@@ -1484,10 +1538,7 @@
     $('upgradeHub').querySelectorAll('.upgrade-option').forEach(opt => {
       opt.onclick = () => {
         const action = opt.dataset.action;
-        if (action === 'generate') {
-          if (checkUserStatus()) return;
-          showGeneratorForm();
-        }
+        if (action === 'generate') { if (checkUserStatus()) return; showGeneratorForm(); }
         if (action === 'ads') startAdsFlow();
         if (action === 'package') showPackages();
       };
@@ -1520,14 +1571,8 @@
   function checkUserStatus() {
     const expired = currentUser.expiresAt && Date.now() > currentUser.expiresAt;
     const limitReached = currentUser.keyLimit > 0 && currentUser.keyUsed >= currentUser.keyLimit;
-    if (expired) {
-      showLockedState('⏰', 'Akun Kadaluarsa', `Masa aktif habis pada ${fmtDate(currentUser.expiresAt)}.`);
-      return true;
-    }
-    if (limitReached) {
-      showLockedState('🚫', 'Limit Generate Habis', `Jatah generate habis (${currentUser.keyUsed}/${currentUser.keyLimit}).`);
-      return true;
-    }
+    if (expired) { showLockedState('⏰', 'Akun Kadaluarsa', `Masa aktif habis pada ${fmtDate(currentUser.expiresAt)}.`); return true; }
+    if (limitReached) { showLockedState('🚫', 'Limit Generate Habis', `Jatah generate habis (${currentUser.keyUsed}/${currentUser.keyLimit}).`); return true; }
     return false;
   }
 
@@ -1589,9 +1634,7 @@
 
   // ============ ADMIN ============
   function setAdminTab(tab) {
-    document.querySelectorAll('.admin-tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.tab === tab);
-    });
+    document.querySelectorAll('.admin-tab').forEach(t => { t.classList.toggle('active', t.dataset.tab === tab); });
     $('panelKelola').classList.toggle('hidden', tab !== 'kelola');
     $('panelDaftar').classList.toggle('hidden', tab !== 'daftar');
     $('generatorSection').classList.toggle('hidden', tab !== 'generator');
@@ -1623,10 +1666,11 @@
     tab.addEventListener('click', () => setAdminTab(tab.dataset.tab));
   });
 
-  function renderUserList() {
-    const users = getUsers();
-    const list = Object.values(users).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  async function renderUserList() {
     const el = $('userListEl');
+    el.innerHTML = '<div class="empty-state">Loading data dari server...</div>';
+    const users = await fbGetUsers();
+    const list = Object.values(users).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     $('userCount').textContent = list.length + ' USERS';
     const totalGen = list.reduce((sum, u) => sum + (u.keyUsed || 0), 0);
     $('dashTotal').textContent = list.length;
@@ -1645,7 +1689,7 @@
         : `<span class="pill ${expired ? 'red' : 'green'}">${expired ? 'Expired' : daysLeft(u.expiresAt) + ' hari'}</span>`;
       const roleBadge = u.role === 'admin' ? '<span class="badge-role admin">ADMIN</span>' : '';
       return `
-        <div class="user-item ${selectedUserId === u.id ? 'selected' : ''}" data-uid="${u.id}">
+        <div class="user-item ${selectedUserId === u.id ? 'selected' : ''}" data-uid="${u.id}" data-uname="${u.username}">
           <div class="top">
             <div class="uname">@${u.username} ${roleBadge}</div>
             <div class="uid" data-copy="${u.id}" title="Klik untuk copy ID">${u.id}</div>
@@ -1655,18 +1699,19 @@
       `;
     }).join('');
     el.querySelectorAll('.user-item').forEach(item => {
-      item.addEventListener('click', (ev) => {
+      item.addEventListener('click', async (ev) => {
         if (ev.target.classList.contains('uid')) {
           ev.stopPropagation();
           const uid = ev.target.dataset.copy;
           copyToClipboard(uid).then(ok => toast(ok ? 'ID dicopy: ' + uid : 'Gagal copy', ok ? 'ok' : 'err'));
           return;
         }
-        const uid = item.dataset.uid;
-        const user = Object.values(getUsers()).find(x => x.id === uid);
+        const uname = item.dataset.uname;
+        const users = await fbGetUsers();
+        const user = users[uname];
         if (!user) return;
-        selectedUserId = uid;
-        $('mgId').value = uid;
+        selectedUserId = user.id;
+        $('mgId').value = user.id;
         $('mgLimit').value = user.keyLimit;
         $('mgDays').value = user.durationDays || 0;
         setAdminTab('kelola');
@@ -1676,65 +1721,65 @@
     });
   }
 
-  $('btnSaveUser').addEventListener('click', () => {
+  $('btnSaveUser').addEventListener('click', async () => {
     const uid = $('mgId').value.trim().toUpperCase();
     const limit = parseInt($('mgLimit').value);
     const days = parseInt($('mgDays').value);
     if (!uid) return toast('Masukkan User ID', 'err');
     if (isNaN(limit) || limit < 0) return toast('Limit tidak valid', 'err');
     if (isNaN(days) || days < 0) return toast('Durasi tidak valid', 'err');
-    const users = getUsers();
+
+    const users = await fbGetUsers();
     const target = Object.values(users).find(u => u.id === uid);
     if (!target) {
       showResult($('adminResult'), { error: 'User ID tidak ditemukan: ' + uid }, false);
       return toast('User ID tidak ditemukan', 'err');
     }
-    target.keyLimit = limit;
-    target.durationDays = days;
-    target.expiresAt = days === 0 ? 0 : Date.now() + (days * 24 * 60 * 60 * 1000);
-    users[target.username] = target;
-    saveUsers(users);
+    const patch = {
+      keyLimit: limit,
+      durationDays: days,
+      expiresAt: days === 0 ? 0 : Date.now() + (days * 24 * 60 * 60 * 1000)
+    };
+    const ok = await fbUpdateUser(target.username, patch);
+    if (!ok) return toast('Gagal update', 'err');
     showResult($('adminResult'), {
       success: true, message: 'User berhasil diupdate',
       user: {
         id: target.id, username: target.username,
         keyLimit: limit === 0 ? '∞ unlimited' : limit,
         durationDays: days === 0 ? '∞ unlimited' : days + ' hari',
-        expiresAt: target.expiresAt === 0 ? 'unlimited' : fmtDate(target.expiresAt)
+        expiresAt: patch.expiresAt === 0 ? 'unlimited' : fmtDate(patch.expiresAt)
       }
     }, true);
     toast('User @' + target.username + ' diupdate ✓');
     renderUserList();
   });
 
-  $('btnResetUsed').addEventListener('click', () => {
+  $('btnResetUsed').addEventListener('click', async () => {
     const uid = $('mgId').value.trim().toUpperCase();
     if (!uid) return toast('Masukkan User ID', 'err');
-    const users = getUsers();
+    const users = await fbGetUsers();
     const target = Object.values(users).find(u => u.id === uid);
     if (!target) return toast('User ID tidak ditemukan', 'err');
-    confirmAction('Reset Pemakaian', `Reset counter key untuk @${target.username}?`, () => {
-      target.keyUsed = 0;
-      target.generations = [];
-      target.adProgress = 0;
-      users[target.username] = target;
-      saveUsers(users);
+    confirmAction('Reset Pemakaian', `Reset counter key untuk @${target.username}?`, async () => {
+      const ok = await fbUpdateUser(target.username, { keyUsed: 0, generations: [], adProgress: 0 });
+      if (!ok) return toast('Gagal reset', 'err');
       showResult($('adminResult'), { success: true, message: 'Pemakaian di-reset untuk @' + target.username }, true);
       toast('Pemakaian di-reset ✓');
       renderUserList();
     });
   });
 
-  $('btnDeleteUser').addEventListener('click', () => {
+  $('btnDeleteUser').addEventListener('click', async () => {
     const uid = $('mgId').value.trim().toUpperCase();
     if (!uid) return toast('Masukkan User ID', 'err');
-    const users = getUsers();
+    const users = await fbGetUsers();
     const target = Object.values(users).find(u => u.id === uid);
     if (!target) return toast('User ID tidak ditemukan', 'err');
     if (target.role === 'admin') return toast('Admin tidak bisa dihapus', 'err');
-    confirmAction('Hapus User', `Yakin hapus @${target.username}?`, () => {
-      delete users[target.username];
-      saveUsers(users);
+    confirmAction('Hapus User', `Yakin hapus @${target.username}?`, async () => {
+      const ok = await fbDeleteUser(target.username);
+      if (!ok) return toast('Gagal hapus', 'err');
       $('mgId').value = '';
       $('mgLimit').value = '1';
       $('mgDays').value = '30';
@@ -1773,27 +1818,20 @@
     $('waModal').classList.remove('show');
     toast('Makasih udah join! 🙌');
   }
-  function closeWA() {
-    $('waModal').classList.remove('show');
-  }
+  function closeWA() { $('waModal').classList.remove('show'); }
   window.joinWA = joinWA;
   window.closeWA = closeWA;
 
   // ============ REWARD ADS ============
   let _adTabOpened = false;
-
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && _adTabOpened && adsState.adOpened) {
-      setTimeout(() => {
-        if (adsState.adOpened) $('adsConfirmModal').classList.add('show');
-      }, 300);
+      setTimeout(() => { if (adsState.adOpened) $('adsConfirmModal').classList.add('show'); }, 300);
     }
   });
   window.addEventListener('focus', () => {
     if (_adTabOpened && adsState.adOpened) {
-      setTimeout(() => {
-        if (adsState.adOpened) $('adsConfirmModal').classList.add('show');
-      }, 300);
+      setTimeout(() => { if (adsState.adOpened) $('adsConfirmModal').classList.add('show'); }, 300);
     }
   });
 
@@ -1840,22 +1878,21 @@
     toast('Balik ke sini setelah nonton iklannya');
   });
 
-  $('btnAdsYes').addEventListener('click', () => {
+  $('btnAdsYes').addEventListener('click', async () => {
     $('adsConfirmModal').classList.remove('show');
     adsState.step++;
     adsState.adOpened = false;
     _adTabOpened = false;
 
-    const users = getUsers();
+    const users = await fbGetUsers();
     const u = users[currentUser.username];
-    u.adProgress = adsState.step;
+    let patch = { adProgress: adsState.step };
 
     if (adsState.step >= ADS_PER_REWARD) {
-      u.keyLimit = (u.keyLimit || 0) + 1;
-      u.adProgress = 0;
-      users[currentUser.username] = u;
-      saveUsers(users);
-      currentUser = u;
+      patch.keyLimit = (u.keyLimit || 0) + 1;
+      patch.adProgress = 0;
+      await fbUpdateUser(currentUser.username, patch);
+      currentUser = { ...u, ...patch };
       renderUserStats();
       $('rewardAmount').textContent = '+1 key';
       $('rewardTotal').textContent = currentUser.keyLimit === 0
@@ -1864,14 +1901,10 @@
       $('rewardModal').classList.add('show');
       spawnConfettiOn($('rewardModal').querySelector('.modal-card'));
       adsState.step = 0;
-      setTimeout(() => {
-        hideAllUserViews();
-        showUpgradeHub();
-      }, 400);
+      setTimeout(() => { hideAllUserViews(); showUpgradeHub(); }, 400);
     } else {
-      users[currentUser.username] = u;
-      saveUsers(users);
-      currentUser = u;
+      await fbUpdateUser(currentUser.username, patch);
+      currentUser = { ...u, ...patch };
       renderAdsStep();
       toast(`Progress ${adsState.step}/${ADS_PER_REWARD} ✓`);
     }
@@ -1887,14 +1920,10 @@
     toast('Selesaikan iklannya dulu ya', 'err');
   });
 
-  $('btnCancelAds').addEventListener('click', () => {
+  $('btnCancelAds').addEventListener('click', async () => {
     if (currentUser) {
-      const users = getUsers();
-      const u = users[currentUser.username];
-      u.adProgress = adsState.step;
-      users[currentUser.username] = u;
-      saveUsers(users);
-      currentUser = u;
+      await fbUpdateUser(currentUser.username, { adProgress: adsState.step });
+      currentUser.adProgress = adsState.step;
     }
     adsState.adOpened = false;
     _adTabOpened = false;
@@ -2057,17 +2086,20 @@
     try {
       const authData = await verifyCode(currentEmail, oobCode);
       const promo = await promotePremium(authData.idToken);
+
       if (currentUser.role === 'user') {
-        const users = getUsers();
+        const users = await fbGetUsers();
         const u = users[currentUser.username];
-        u.keyUsed = (u.keyUsed || 0) + 1;
-        u.generations = u.generations || [];
-        u.generations.push({ email: currentEmail, orderId: promo.orderId, at: Date.now() });
-        if (u.generations.length > 20) u.generations = u.generations.slice(-20);
-        users[currentUser.username] = u;
-        saveUsers(users);
-        currentUser = u;
+        const gens = u.generations || [];
+        gens.push({ email: currentEmail, orderId: promo.orderId, at: Date.now() });
+        const patch = {
+          keyUsed: (u.keyUsed || 0) + 1,
+          generations: gens.slice(-20)
+        };
+        await fbUpdateUser(currentUser.username, patch);
+        currentUser = { ...u, ...patch };
       }
+
       $('succEmail').textContent = currentEmail;
       $('succOrder').textContent = promo.orderId.substring(0, 14) + '...';
       $('succUid').textContent = authData.localId ? authData.localId.substring(0, 12) + '...' : '-';
@@ -2118,10 +2150,11 @@
   });
 
   // ============ SUCCESS MODAL ============
-  function closeSuccess() {
+  async function closeSuccess() {
     $('successModal').classList.remove('show');
     if (!currentUser) return;
-    currentUser = getUsers()[currentUser.username];
+    const users = await fbGetUsers();
+    currentUser = users[currentUser.username] || currentUser;
     if (currentUser.role === 'admin') {
       hideAllUserViews();
       setAdminTab('generator');
@@ -2151,24 +2184,25 @@
     if (e.target === $('successModal')) closeSuccess();
   });
 
-  // ============ INIT ============
-  (function init() {
-    seedAdmin();
+  // ============================================================
+  //  INIT
+  // ============================================================
+  (async function init() {
     bindInAppButtons();
-
-    // Deteksi in-app browser
-    if (isInAppBrowser()) {
-      setTimeout(showInAppWarning, 300);
-    }
+    if (isInAppBrowser()) setTimeout(showInAppWarning, 300);
 
     const sess = getSession();
     if (sess?.username) {
-      const users = getUsers();
-      if (users[sess.username]) {
-        currentUser = users[sess.username];
-        showApp();
-      } else {
-        clearSession();
+      try {
+        const users = await fbGetUsers();
+        if (users[sess.username]) {
+          currentUser = users[sess.username];
+          showApp();
+        } else {
+          clearSession();
+        }
+      } catch (e) {
+        console.error('Init error:', e);
       }
     }
   })();
